@@ -25,12 +25,31 @@ struct JsonRequestBody {
 
 async fn function_handler(event: Request) -> Result<Response<Body>, Error> {
     // リクエストから情報を抽出
-    let json = from_utf8(event.body()).expect("illegal body");
+    let json = match from_utf8(event.body()) {
+        Ok(v) => v,
+        Err(e) => {
+            tracing::error!("Error: {}", e);
+            return Ok(Response::builder()
+                .status(400)
+                .body("Error".into())
+                .map_err(Box::new)?);
+        }
+    };
+
     // トレースログを出力
     tracing::info!(payload = %json, "JSON Payload received");
 
     // リクエストのボディをパース
-    let req = from_str::<JsonRequestBody>(json).expect("parse error");
+    let req = match from_str::<JsonRequestBody>(json) {
+        Ok(v) => v,
+        Err(e) => {
+            tracing::error!("Error: {}", e);
+            return Ok(Response::builder()
+                .status(400)
+                .body("Error".into())
+                .map_err(Box::new)?);
+        }
+    };
 
     // レスポンスを返す
     let resp = Response::builder()
