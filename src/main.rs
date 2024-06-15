@@ -14,7 +14,7 @@
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 use lambda_http::{run, service_fn, tracing, Body, Error, Request, Response};
-use serde::Deserialize;
+use serde::{Deserialize, Serialize};
 use serde_json::from_str;
 use std::str::from_utf8;
 
@@ -23,15 +23,34 @@ struct JsonRequestBody {
     message: String,
 }
 
+#[derive(Serialize, Debug)]
+struct JsonErrorBody {
+    #[serde(rename = "statusCode")]
+    status_code: u16,
+    message: String,
+}
+
+#[derive(Serialize, Debug)]
+struct JsonResponseBody {
+    answer: String,
+}
+
 async fn function_handler(event: Request) -> Result<Response<Body>, Error> {
     // リクエストから情報を抽出
     let json = match from_utf8(event.body()) {
         Ok(v) => v,
         Err(e) => {
             tracing::error!("Error: {}", e);
+
+            let e = JsonErrorBody {
+                status_code: 400,
+                message: e.to_string(),
+            };
+            let e = serde_json::to_string(&e).unwrap();
+
             return Ok(Response::builder()
                 .status(400)
-                .body("Error".into())
+                .body(e.to_string().into())
                 .map_err(Box::new)?);
         }
     };
@@ -44,19 +63,31 @@ async fn function_handler(event: Request) -> Result<Response<Body>, Error> {
         Ok(v) => v,
         Err(e) => {
             tracing::error!("Error: {}", e);
+
+            let e = JsonErrorBody {
+                status_code: 400,
+                message: e.to_string(),
+            };
+            let e = serde_json::to_string(&e).unwrap();
+
             return Ok(Response::builder()
                 .status(400)
-                .body("Error".into())
+                .body(e.to_string().into())
                 .map_err(Box::new)?);
         }
     };
 
+    // レスポンスのボディを作成
+    let answer = JsonResponseBody {
+        answer: format!("Hello, {}!", req.message),
+    };
+    let answer = serde_json::to_string(&answer).unwrap();
+
     // レスポンスを返す
     let resp = Response::builder()
         .status(200)
-        // .header("content-type", "application/json; charset=utf-8")
-        .header("content-type", "text/plain; charset=utf-8")
-        .body(req.message.into())
+        .header("content-type", "application/json; charset=utf-8")
+        .body(answer.to_string().into())
         .map_err(Box::new)?;
     Ok(resp)
 }
