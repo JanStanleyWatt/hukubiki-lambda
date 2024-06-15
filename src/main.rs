@@ -37,6 +37,9 @@ struct JsonResponseBody {
 
 const HTTP_OK: u16 = 200;
 const HTTP_BAD_REQUEST: u16 = 400;
+const HTTP_INTERNAL_SERVER_ERROR: u16 = 500;
+const INTERNAL_SERVER_ERROR_MESSAGE: &str =
+    "{\"statusCode\":500,\"message\":\"Internal server error\"}";
 
 async fn function_handler(event: Request) -> Result<Response<Body>, Error> {
     // リクエストから情報を抽出
@@ -49,8 +52,16 @@ async fn function_handler(event: Request) -> Result<Response<Body>, Error> {
                 status_code: HTTP_BAD_REQUEST,
                 message: e.to_string(),
             };
-            let e = serde_json::to_string(&e).unwrap();
-
+            let e = match serde_json::to_string(&e) {
+                Ok(v) => v,
+                Err(e) => {
+                    tracing::error!("Error: {}", e);
+                    return Ok(Response::builder()
+                        .status(HTTP_INTERNAL_SERVER_ERROR)
+                        .body(INTERNAL_SERVER_ERROR_MESSAGE.to_string().into())
+                        .map_err(Box::new)?);
+                }
+            };
             return Ok(Response::builder()
                 .status(HTTP_BAD_REQUEST)
                 .body(e.to_string().into())
@@ -71,7 +82,16 @@ async fn function_handler(event: Request) -> Result<Response<Body>, Error> {
                 status_code: HTTP_BAD_REQUEST,
                 message: e.to_string(),
             };
-            let e = serde_json::to_string(&e).unwrap();
+            let e = match serde_json::to_string(&e) {
+                Ok(v) => v,
+                Err(e) => {
+                    tracing::error!("Error: {}", e);
+                    return Ok(Response::builder()
+                        .status(HTTP_INTERNAL_SERVER_ERROR)
+                        .body(INTERNAL_SERVER_ERROR_MESSAGE.to_string().into())
+                        .map_err(Box::new)?);
+                }
+            };
 
             return Ok(Response::builder()
                 .status(HTTP_BAD_REQUEST)
@@ -84,7 +104,16 @@ async fn function_handler(event: Request) -> Result<Response<Body>, Error> {
     let answer = JsonResponseBody {
         answer: format!("Hello, {}!", req.message),
     };
-    let answer = serde_json::to_string(&answer).unwrap();
+    let answer = match serde_json::to_string(&answer) {
+        Ok(v) => v,
+        Err(e) => {
+            tracing::error!("Error: {}", e);
+            return Ok(Response::builder()
+                .status(HTTP_INTERNAL_SERVER_ERROR)
+                .body(INTERNAL_SERVER_ERROR_MESSAGE.to_string().into())
+                .map_err(Box::new)?);
+        }
+    };
 
     // レスポンスを返す
     let resp = Response::builder()
@@ -92,6 +121,7 @@ async fn function_handler(event: Request) -> Result<Response<Body>, Error> {
         .header("content-type", "application/json; charset=utf-8")
         .body(answer.to_string().into())
         .map_err(Box::new)?;
+
     Ok(resp)
 }
 
