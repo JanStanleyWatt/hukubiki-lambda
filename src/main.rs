@@ -1,3 +1,18 @@
+// Copyright (C) 2024 Jan Stanley Watt
+
+// This program is free software: you can redistribute it and/or modify
+// it under the terms of the GNU Affero General Public License as published
+// by the Free Software Foundation, either version 3 of the License, or
+// (at your option) any later version.
+
+// This program is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+// GNU Affero General Public License for more details.
+
+// You should have received a copy of the GNU Affero General Public License
+// along with this program.  If not, see <https://www.gnu.org/licenses/>.
+
 use lambda_http::{run, service_fn, tracing, Body, Error, Request, Response};
 use serde::Deserialize;
 use serde_json::from_str;
@@ -10,12 +25,31 @@ struct JsonRequestBody {
 
 async fn function_handler(event: Request) -> Result<Response<Body>, Error> {
     // リクエストから情報を抽出
-    let json = from_utf8(event.body()).expect("illegal body");
+    let json = match from_utf8(event.body()) {
+        Ok(v) => v,
+        Err(e) => {
+            tracing::error!("Error: {}", e);
+            return Ok(Response::builder()
+                .status(400)
+                .body("Error".into())
+                .map_err(Box::new)?);
+        }
+    };
+
     // トレースログを出力
     tracing::info!(payload = %json, "JSON Payload received");
 
     // リクエストのボディをパース
-    let req = from_str::<JsonRequestBody>(json).expect("parse error");
+    let req = match from_str::<JsonRequestBody>(json) {
+        Ok(v) => v,
+        Err(e) => {
+            tracing::error!("Error: {}", e);
+            return Ok(Response::builder()
+                .status(400)
+                .body("Error".into())
+                .map_err(Box::new)?);
+        }
+    };
 
     // レスポンスを返す
     let resp = Response::builder()
