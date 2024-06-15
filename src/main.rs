@@ -35,6 +35,9 @@ struct JsonResponseBody {
     answer: String,
 }
 
+const HTTP_OK: u16 = 200;
+const HTTP_BAD_REQUEST: u16 = 400;
+
 async fn function_handler(event: Request) -> Result<Response<Body>, Error> {
     // リクエストから情報を抽出
     let json = match from_utf8(event.body()) {
@@ -43,13 +46,13 @@ async fn function_handler(event: Request) -> Result<Response<Body>, Error> {
             tracing::error!("Error: {}", e);
 
             let e = JsonErrorBody {
-                status_code: 400,
+                status_code: HTTP_BAD_REQUEST,
                 message: e.to_string(),
             };
             let e = serde_json::to_string(&e).unwrap();
 
             return Ok(Response::builder()
-                .status(400)
+                .status(HTTP_BAD_REQUEST)
                 .body(e.to_string().into())
                 .map_err(Box::new)?);
         }
@@ -65,13 +68,13 @@ async fn function_handler(event: Request) -> Result<Response<Body>, Error> {
             tracing::error!("Error: {}", e);
 
             let e = JsonErrorBody {
-                status_code: 400,
+                status_code: HTTP_BAD_REQUEST,
                 message: e.to_string(),
             };
             let e = serde_json::to_string(&e).unwrap();
 
             return Ok(Response::builder()
-                .status(400)
+                .status(HTTP_BAD_REQUEST)
                 .body(e.to_string().into())
                 .map_err(Box::new)?);
         }
@@ -85,7 +88,7 @@ async fn function_handler(event: Request) -> Result<Response<Body>, Error> {
 
     // レスポンスを返す
     let resp = Response::builder()
-        .status(200)
+        .status(HTTP_OK)
         .header("content-type", "application/json; charset=utf-8")
         .body(answer.to_string().into())
         .map_err(Box::new)?;
